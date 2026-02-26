@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>麵包大評比</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Noto+Serif+TC:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F5EFE0;
+    --warm: #E8D5B0;
+    --brown: #6B4C2A;
+    --dark: #2C1A0E;
+    --accent: #C4702A;
+    --gold: #D4A843;
+    --light-text: #8B6B4A;
+    --card-bg: #FDFAF4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--cream);
+    font-family: 'Noto Serif TC', serif;
+    color: var(--dark);
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.4;
+  }
+
+  header {
+    text-align: center;
+    padding: 60px 20px 40px;
+    border-bottom: 1px solid var(--warm);
+  }
+
+  header::after {
+    content: '✦';
+    display: block;
+    color: var(--gold);
+    font-size: 12px;
+    margin-top: 16px;
+    letter-spacing: 8px;
+  }
+
+  .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--light-text);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(48px, 8vw, 88px);
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+
+  h1 em { font-style: italic; color: var(--accent); }
+  .subtitle { font-size: 13px; color: var(--light-text); margin-top: 12px; letter-spacing: 1px; }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    padding: 28px 20px 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .sort-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    border: 1px solid var(--warm);
+    background: transparent;
+    color: var(--light-text);
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+  }
+
+  .sort-btn:hover, .sort-btn.active {
+    background: var(--dark);
+    color: var(--cream);
+    border-color: var(--dark);
+  }
+
+  .add-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 20px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+    margin-left: 8px;
+  }
+
+  .add-btn:hover { background: var(--brown); border-color: var(--brown); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2px;
+    padding: 16px 20px 60px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* Loading state */
+  .loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    gap: 16px;
+    color: var(--light-text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  .loader {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--warm);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-screen {
+    text-align: center;
+    padding: 60px 20px;
+    color: #9B2335;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    line-height: 2;
+  }
+
+  .retry-btn {
+    margin-top: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 20px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    border-radius: 2px;
+  }
+
+  .card {
+    background: var(--card-bg);
+    padding: 32px 28px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+    position: relative;
+    animation: fadeUp 0.5s ease backwards;
+  }
+
+  .card:hover {
+    background: #fff;
+    border-color: var(--warm);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(44,26,14,0.08);
+    z-index: 1;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-rank {
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .rank-num {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--warm);
+    line-height: 1;
+    font-family: 'Playfair Display', serif;
+  }
+
+  .price-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border: 1px solid var(--warm);
+    color: var(--light-text);
+  }
+
+  .shop-name { font-size: 11px; color: var(--light-text); letter-spacing: 1px; margin-bottom: 4px; font-family: 'DM Mono', monospace; }
+
+  .item-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--dark);
+    margin-bottom: 20px;
+    line-height: 1.3;
+  }
+
+  .scores-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--warm);
+  }
+
+  .score-item { text-align: center; }
+
+  .score-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: var(--light-text);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .score-val { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--dark); }
+  .score-val.highlight { color: var(--accent); }
+
+  .stars { display: flex; justify-content: center; gap: 2px; margin-top: 2px; }
+  .star { width: 10px; height: 10px; }
+  .star svg { width: 100%; height: 100%; }
+
+  .tags-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+
+  .tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    background: var(--warm);
+    color: var(--brown);
+    border-radius: 1px;
+  }
+
+  .tag.revisit-yes { background: #D4EDDA; color: #2D6A4F; }
+  .tag.revisit-no { background: #FFE4E4; color: #9B2335; }
+  .tag.revisit-maybe { background: #FFF3CD; color: #856404; }
+
+  .comment {
+    font-size: 12px;
+    color: var(--light-text);
+    line-height: 1.7;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card.top-card { background: var(--dark); }
+  .card.top-card .shop-name, .card.top-card .score-label, .card.top-card .comment, .card.top-card .card-rank { color: #9B7E60; }
+  .card.top-card .item-name, .card.top-card .score-val { color: var(--cream); }
+  .card.top-card .rank-num { color: #4A3020; }
+  .card.top-card .scores-row { border-color: #3D2A18; }
+  .card.top-card .price-badge { border-color: #4A3020; color: #9B7E60; }
+  .card.top-card .tag { background: #3D2A18; color: #9B7E60; }
+  .card.top-card .score-val.highlight { color: var(--gold); }
+  .card.top-card:hover { background: #1A0D04; border-color: var(--accent); }
+  .crown { color: var(--gold); font-size: 14px; }
+
+  /* Overlays */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(44,26,14,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .overlay.open { display: flex; }
+
+  .modal {
+    background: var(--card-bg);
+    max-width: 560px;
+    width: 100%;
+    padding: 44px;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 20px; right: 20px;
+    background: none; border: none;
+    font-size: 20px; cursor: pointer;
+    color: var(--light-text);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .modal-shop { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--light-text); letter-spacing: 2px; margin-bottom: 6px; }
+  .modal-item { font-family: 'Playfair Display', serif; font-size: 32px; margin-bottom: 28px; color: var(--dark); line-height: 1.2; }
+
+  .modal-scores {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 24px 0;
+    border-top: 1px solid var(--warm);
+    border-bottom: 1px solid var(--warm);
+    margin-bottom: 20px;
+  }
+
+  .modal-score-item { text-align: center; }
+  .modal-score-label { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 1.5px; color: var(--light-text); display: block; margin-bottom: 6px; text-transform: uppercase; }
+  .modal-score-val { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--dark); }
+  .modal-score-val.accent { color: var(--accent); }
+
+  .modal-meta { display: flex; gap: 16px; margin-bottom: 20px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--light-text); flex-wrap: wrap; }
+  .modal-section-title { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--light-text); text-transform: uppercase; margin-bottom: 8px; }
+  .modal-comment { font-size: 14px; line-height: 1.8; color: var(--dark); margin-bottom: 20px; }
+  .modal-revisit { font-size: 13px; color: var(--light-text); margin-bottom: 28px; }
+  .modal-revisit strong { color: var(--dark); }
+
+  .modal-del-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border: 1px solid #FFCCCC;
+    background: transparent;
+    color: #9B2335;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+  }
+  .modal-del-btn:hover { background: #9B2335; color: #fff; }
+  .modal-del-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Add Form */
+  .form-panel {
+    background: var(--card-bg);
+    max-width: 640px;
+    width: 100%;
+    padding: 44px;
+    position: relative;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+
+  .form-title { font-family: 'Playfair Display', serif; font-size: 28px; margin-bottom: 28px; color: var(--dark); }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  .form-group label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--light-text);
+    text-transform: uppercase;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--warm);
+    background: var(--cream);
+    color: var(--dark);
+    outline: none;
+    transition: border-color 0.2s;
+    border-radius: 2px;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus { border-color: var(--accent); }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  /* star picker */
+  .star-picker { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 8px 0; }
+  .star-pip {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 5px 9px;
+    border: 1px solid var(--warm);
+    cursor: pointer;
+    color: var(--light-text);
+    border-radius: 2px;
+    transition: all 0.15s;
+    background: transparent;
+  }
+  .star-pip:hover { border-color: var(--gold); color: var(--gold); }
+  .star-pip.sel { background: var(--gold); border-color: var(--gold); color: #fff; }
+  .star-chosen { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--accent); margin-left: 10px; min-width: 30px; }
+
+  .form-preview {
+    background: var(--warm);
+    padding: 14px 20px;
+    margin: 12px 0;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--brown);
+    display: none;
+    gap: 24px;
+  }
+  .form-preview.show { display: flex; }
+  .form-preview b { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--dark); }
+
+  .form-actions { display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end; align-items: center; }
+
+  .btn-cancel {
+    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    padding: 10px 24px; border: 1px solid var(--warm); background: transparent; color: var(--light-text); cursor: pointer; border-radius: 2px;
+  }
+
+  .btn-submit {
+    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    padding: 10px 24px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; border-radius: 2px; transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .btn-submit:hover:not(:disabled) { background: var(--brown); border-color: var(--brown); }
+  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .btn-spinner.show { display: block; }
+
+  /* toast */
+  .toast {
+    position: fixed;
+    bottom: 32px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--dark); color: var(--cream);
+    font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 1px;
+    padding: 12px 24px; border-radius: 2px;
+    transition: transform 0.3s ease;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { background: #9B2335; }
+
+  footer {
+    text-align: center; padding: 40px;
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px;
+    color: var(--light-text); border-top: 1px solid var(--warm);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">台灣麵包田野調查</div>
+  <h1>麵包<em>大</em>評比</h1>
+  <p class="subtitle" id="countLine">載入中…</p>
+</header>
+
+<div class="controls">
+  <button class="sort-btn active" onclick="sortCards('rank',this)">排名</button>
+  <button class="sort-btn" onclick="sortCards('taste',this)">口味分</button>
+  <button class="sort-btn" onclick="sortCards('cp',this)">CP值</button>
+  <button class="sort-btn" onclick="sortCards('overall',this)">綜合評分</button>
+  <button class="sort-btn" onclick="sortCards('price',this)">價格</button>
+  <button class="add-btn" onclick="openAddForm()">＋ 新增評比</button>
+</div>
+
+<div class="grid" id="grid">
+  <div class="loading-screen" style="grid-column:1/-1">
+    <div class="loader"></div>
+    <span>從 Google Sheets 載入資料中…</span>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeDetail()">✕</button>
+    <div class="modal-shop" id="m-shop"></div>
+    <div class="modal-item" id="m-item"></div>
+    <div class="modal-scores">
+      <div class="modal-score-item"><span class="modal-score-label">口味</span><div class="modal-score-val accent" id="m-taste"></div></div>
+      <div class="modal-score-item"><span class="modal-score-label">CP值</span><div class="modal-score-val" id="m-cp"></div></div>
+      <div class="modal-score-item"><span class="modal-score-label">綜合</span><div class="modal-score-val" id="m-overall"></div></div>
+      <div class="modal-score-item"><span class="modal-score-label">價格</span><div class="modal-score-val" id="m-price"></div></div>
+    </div>
+    <div class="modal-meta">
+      <span>📍 <span id="m-location"></span></span>
+      <span>📦 <span id="m-size"></span></span>
+      <span>🚶 <span id="m-conv"></span></span>
+    </div>
+    <div class="modal-section-title">評語</div>
+    <div class="modal-comment" id="m-comment"></div>
+    <div class="modal-section-title">回訪意願</div>
+    <div class="modal-revisit" id="m-revisit"></div>
+    <button class="modal-del-btn" id="m-del-btn">🗑 刪除這筆評比</button>
+  </div>
+</div>
+
+<!-- Add Form -->
+<div class="overlay" id="addOverlay" onclick="if(event.target===this)closeAddForm()">
+  <div class="form-panel">
+    <button class="modal-close" onclick="closeAddForm()">✕</button>
+    <div class="form-title">新增麵包評比</div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>店家名稱 *</label>
+        <input type="text" id="f-shop" placeholder="Johan LaLaport 南港店">
+      </div>
+      <div class="form-group full">
+        <label>品項名稱 *</label>
+        <input type="text" id="f-item" placeholder="胖胖的法國">
+      </div>
+      <div class="form-group full">
+        <label>口味分數 *</label>
+        <div class="star-picker" id="starPicker"></div>
+      </div>
+      <div class="form-group">
+        <label>價格 NT$ *</label>
+        <input type="number" id="f-price" placeholder="100" min="1" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>價格級距</label>
+        <select id="f-pricelevel">
+          <option value="$">$ 便宜</option>
+          <option value="$$" selected>$$ 中等</option>
+          <option value="$$$">$$$ 偏貴</option>
+          <option value="$$$$">$$$$ 高貴</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>大小</label>
+        <select id="f-size" oninput="updatePreview()">
+          <option value="1">1 — 小</option>
+          <option value="2" selected>2 — 中</option>
+          <option value="3">3 — 大</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>地點方便性</label>
+        <select id="f-conv" oninput="updatePreview()">
+          <option value="1">1 — 超級遠</option>
+          <option value="2">2 — 偏遠</option>
+          <option value="3">3 — 需要特別去</option>
+          <option value="4" selected>4 — 同區域</option>
+          <option value="5">5 — 生活圈內</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>地點描述</label>
+        <input type="text" id="f-location" placeholder="南港 lalaport 2樓">
+      </div>
+      <div class="form-group full">
+        <label>評語</label>
+        <textarea id="f-comment" placeholder="口感、外觀、風味……想到什麼就寫什麼"></textarea>
+      </div>
+      <div class="form-group full">
+        <label>回訪意願</label>
+        <input type="text" id="f-revisit" placeholder="有經過就會回訪">
+      </div>
+    </div>
+    <div class="form-preview" id="formPreview">
+      <div>CP值 <b id="prev-cp">—</b></div>
+      <div>綜合評分 <b id="prev-overall">—</b></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeAddForm()">取消</button>
+      <button class="btn-submit" id="submitBtn" onclick="submitForm()">
+        <div class="btn-spinner" id="submitSpinner"></div>
+        <span id="submitLabel">加入評比 →</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<footer>麵包無國界 · 以胃換心</footer>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbz8myQ3xsIYe-2USuzNy9TClxm0YILd6T1QWfpAY1zKDpzpS62-Fjv4aUXJonXFILCV7A/exec';
+
+const convMap = {1:'超級遠',2:'偏遠',3:'需要特別去',4:'同區域',5:'生活圈內'};
+const sizeMap = {1:'小',2:'中',3:'大'};
+const TASTE_OPTIONS = [0.5,1,1.5,2,2.5,3,3.5,4,4.5,5];
+
+let breads = [];
+let currentSort = 'rank';
+let detailId = null;
+let selectedTaste = 0;
+
+// ── API ──
+async function apiGet() {
+  const res = await fetch(`${API_URL}?action=getAll`);
+  const json = await res.json();
+  if (json.error) throw new Error(json.error);
+  return json.breads;
+}
+
+async function apiAdd(data) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'add', ...data }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error);
+  return json;
+}
+
+async function apiDelete(id) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'delete', id }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error);
+  return json;
+}
+
+// ── Render helpers ──
+function starsHTML(score) {
+  const full = Math.floor(score);
+  const half = score % 1 >= 0.3;
+  const empty = 5 - full - (half ? 1 : 0);
+  const s = (type) => {
+    const c = type === 'empty' ? '#E0D0B8' : '#D4A843';
+    return `<span class="star"><svg viewBox="0 0 10 10"><polygon points="5,1 6.2,3.8 9.5,4.1 7.1,6.1 7.9,9.3 5,7.6 2.1,9.3 2.9,6.1 0.5,4.1 3.8,3.8" fill="${c}"/></svg></span>`;
+  };
+  let h = '';
+  for(let i=0;i<full;i++) h+=s('full');
+  if(half) h+=s('half');
+  for(let i=0;i<empty;i++) h+=s('empty');
+  return h;
+}
+
+function revisitClass(t) {
+  if(!t) return '';
+  if(t.includes('不回')||t.includes('不會回')||t.includes('不要')) return 'revisit-no';
+  if(t.includes('必')||t.includes('會回')||t.includes('可以買')||t.includes('回訪')) return 'revisit-yes';
+  return 'revisit-maybe';
+}
+
+function getSorted() {
+  let s = [...breads];
+  if(currentSort==='rank') s.sort((a,b)=>a.rank-b.rank);
+  else if(currentSort==='taste') s.sort((a,b)=>b.taste-a.taste);
+  else if(currentSort==='cp') s.sort((a,b)=>b.cp-a.cp);
+  else if(currentSort==='overall') s.sort((a,b)=>b.overall-a.overall);
+  else if(currentSort==='price') s.sort((a,b)=>a.price-b.price);
+  return s;
+}
+
+function renderCards() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  document.getElementById('countLine').textContent = `${breads.length} 筆評比 · 口味 · CP值 · 綜合評分`;
+
+  if (breads.length === 0) {
+    grid.innerHTML = `<div class="loading-screen" style="grid-column:1/-1;color:var(--light-text)">還沒有評比，新增第一筆吧！</div>`;
+    return;
+  }
+
+  getSorted().forEach((b, i) => {
+    const isTop = b.rank === 1;
+    const div = document.createElement('div');
+    div.className = 'card' + (isTop ? ' top-card' : '');
+    div.style.animationDelay = (i * 0.04) + 's';
+    const loc = b.location.length > 16 ? b.location.slice(0,16)+'…' : b.location;
+    const rv = b.revisit ? (b.revisit.length > 14 ? b.revisit.slice(0,14)+'…' : b.revisit) : '';
+    div.innerHTML = `
+      <div class="card-rank">
+        <div class="rank-num">${String(b.rank).padStart(2,'0')}</div>
+        ${isTop ? '<span class="crown">♛ 最推</span>' : ''}
+        <span class="price-badge">${b.priceLevel} ¥${b.price}</span>
+      </div>
+      <div class="shop-name">${b.shop}</div>
+      <div class="item-name">${b.item}</div>
+      <div class="scores-row">
+        <div class="score-item"><span class="score-label">口味</span><div class="score-val highlight">${b.taste}</div><div class="stars">${starsHTML(b.taste)}</div></div>
+        <div class="score-item"><span class="score-label">CP值</span><div class="score-val">${b.cp}</div></div>
+        <div class="score-item"><span class="score-label">綜合</span><div class="score-val">${b.overall}</div></div>
+      </div>
+      <div class="tags-row">
+        <span class="tag">${loc}</span>
+        ${rv ? `<span class="tag ${revisitClass(b.revisit)}">${rv}</span>` : ''}
+      </div>
+      <div class="comment">${b.comment}</div>`;
+    div.onclick = () => openDetail(b.id);
+    grid.appendChild(div);
+  });
+}
+
+function showError(msg) {
+  document.getElementById('grid').innerHTML = `
+    <div class="error-screen" style="grid-column:1/-1">
+      ⚠️ 無法載入資料<br><small>${msg}</small><br>
+      <button class="retry-btn" onclick="loadData()">重試</button>
+    </div>`;
+  document.getElementById('countLine').textContent = '載入失敗';
+}
+
+// ── Load ──
+async function loadData() {
+  document.getElementById('grid').innerHTML = `
+    <div class="loading-screen" style="grid-column:1/-1">
+      <div class="loader"></div>
+      <span>從 Google Sheets 載入中…</span>
+    </div>`;
+  try {
+    breads = await apiGet();
+    renderCards();
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+// ── Sort ──
+function sortCards(by, btn) {
+  currentSort = by;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCards();
+}
+
+// ── Detail ──
+function openDetail(id) {
+  const b = breads.find(x => x.id === id);
+  if (!b) return;
+  detailId = id;
+  document.getElementById('m-shop').textContent = b.shop;
+  document.getElementById('m-item').textContent = b.item;
+  document.getElementById('m-taste').textContent = b.taste;
+  document.getElementById('m-cp').textContent = b.cp;
+  document.getElementById('m-overall').textContent = b.overall;
+  document.getElementById('m-price').textContent = `¥${b.price} ${b.priceLevel}`;
+  document.getElementById('m-location').textContent = b.location;
+  document.getElementById('m-size').textContent = '大小：' + (sizeMap[b.size] || b.size);
+  document.getElementById('m-conv').textContent = '方便度：' + (convMap[b.convenience] || b.convenience);
+  document.getElementById('m-comment').textContent = b.comment;
+  document.getElementById('m-revisit').innerHTML = `<strong>回訪意願：</strong>${b.revisit || '—'}`;
+  const delBtn = document.getElementById('m-del-btn');
+  delBtn.disabled = false;
+  delBtn.textContent = '🗑 刪除這筆評比';
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function closeDetail() { document.getElementById('detailOverlay').classList.remove('open'); }
+
+document.getElementById('m-del-btn').onclick = async () => {
+  if (!detailId || !confirm('確定要刪除這筆評比嗎？')) return;
+  const btn = document.getElementById('m-del-btn');
+  const b = breads.find(x => x.id === detailId);
+  const name = b ? b.item : '';
+  btn.disabled = true;
+  btn.textContent = '刪除中…';
+  try {
+    await apiDelete(detailId);
+    breads = breads.filter(x => x.id !== detailId);
+    closeDetail();
+    await loadData(); // 重新載入讓排名同步
+    showToast(`「${name}」已刪除`);
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '🗑 刪除這筆評比';
+    showToast('刪除失敗：' + e.message, true);
+  }
+};
+
+// ── Add Form ──
+function buildStarPicker() {
+  const c = document.getElementById('starPicker');
+  c.innerHTML = '';
+  TASTE_OPTIONS.forEach(v => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'star-pip';
+    btn.textContent = v % 1 === 0 ? `★ ${v}` : `½ ${v}`;
+    btn.dataset.val = v;
+    btn.onclick = () => {
+      selectedTaste = v;
+      document.querySelectorAll('.star-pip').forEach(p => p.classList.toggle('sel', parseFloat(p.dataset.val) === v));
+      document.getElementById('starChosen').textContent = v;
+      updatePreview();
+    };
+    c.appendChild(btn);
+  });
+  const disp = document.createElement('span');
+  disp.className = 'star-chosen';
+  disp.id = 'starChosen';
+  disp.textContent = '—';
+  c.appendChild(disp);
+}
+
+function updatePreview() {
+  const price = parseFloat(document.getElementById('f-price').value);
+  const size = parseInt(document.getElementById('f-size').value);
+  const conv = parseInt(document.getElementById('f-conv').value);
+  if (!price || !selectedTaste) { document.getElementById('formPreview').classList.remove('show'); return; }
+  const cp = Math.round((selectedTaste / (price / size)) * 10000) / 100;
+  const overall = Math.round(((selectedTaste * 0.7) + (cp * 0.2) + (conv * 0.1)) * 100) / 100;
+  document.getElementById('prev-cp').textContent = cp;
+  document.getElementById('prev-overall').textContent = overall;
+  document.getElementById('formPreview').classList.add('show');
+}
+
+function openAddForm() {
+  selectedTaste = 0;
+  buildStarPicker();
+  ['f-shop','f-item','f-price','f-location','f-comment','f-revisit'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-pricelevel').value = '$$';
+  document.getElementById('f-size').value = '2';
+  document.getElementById('f-conv').value = '4';
+  document.getElementById('formPreview').classList.remove('show');
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = false;
+  document.getElementById('submitLabel').textContent = '加入評比 →';
+  document.getElementById('submitSpinner').classList.remove('show');
+  document.getElementById('addOverlay').classList.add('open');
+}
+
+function closeAddForm() { document.getElementById('addOverlay').classList.remove('open'); }
+
+async function submitForm() {
+  const shop = document.getElementById('f-shop').value.trim();
+  const item = document.getElementById('f-item').value.trim();
+  const price = parseFloat(document.getElementById('f-price').value);
+  const size = parseInt(document.getElementById('f-size').value);
+  const conv = parseInt(document.getElementById('f-conv').value);
+  const priceLevel = document.getElementById('f-pricelevel').value;
+  const location = document.getElementById('f-location').value.trim() || '未填';
+  const comment = document.getElementById('f-comment').value.trim() || '（無評語）';
+  const revisit = document.getElementById('f-revisit').value.trim();
+
+  if (!shop) { alert('請填入店家名稱'); return; }
+  if (!item) { alert('請填入品項名稱'); return; }
+  if (!selectedTaste) { alert('請選擇口味分數'); return; }
+  if (!price || price <= 0) { alert('請填入有效價格'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  document.getElementById('submitLabel').textContent = '儲存中…';
+  document.getElementById('submitSpinner').classList.add('show');
+
+  try {
+    await apiAdd({ shop, item, taste: selectedTaste, price, size, convenience: conv, priceLevel, location, comment, revisit });
+    closeAddForm();
+    await loadData();
+    showToast(`「${item}」已加入評比！`);
+  } catch(e) {
+    btn.disabled = false;
+    document.getElementById('submitLabel').textContent = '加入評比 →';
+    document.getElementById('submitSpinner').classList.remove('show');
+    showToast('儲存失敗：' + e.message, true);
+  }
+}
+
+// ── Toast ──
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── Init ──
+loadData();
+</script>
+</body>
+</html>
